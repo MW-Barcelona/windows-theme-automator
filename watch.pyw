@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 import sys
 import time
 import uuid
@@ -8,6 +9,26 @@ from watchdog.events import LoggingEventHandler, FileSystemEventHandler
 
 
 PATH = 'C:\\Users\\Oshino\\AppData\\Local\\Microsoft\\Windows\\Themes\\anime.theme'
+
+def get_file_count():
+    dir = '.'
+    count = 0
+    for path in os.listdir(dir):
+        suf = file.split('.')
+        if len(suf) > 1:
+            suf = suf[len(suf)-1].lower()
+
+        if suf == 'png' or suf == 'jpg':
+            count += 1
+
+    return count 
+
+def activate_theme():
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    subprocess.call(f'powershell.exe {PATH}', startupinfo=si)
+    time.sleep(1)
+    subprocess.call(f'powershell.exe taskkill /IM SystemSettings.exe /F', startupinfo=si)
 
 def rename_pictures():
     for file in os.listdir('.'):
@@ -23,7 +44,7 @@ def write_theme_file():
     fwrite = open(PATH, 'w')
     fappend = open(PATH, 'a')
 
-    # Write all until ImagesRootPath
+    # Write all lines until ImagesRootPath
     for line in fread.readlines():
         fwrite.write(line)
         linenum += 1
@@ -38,6 +59,7 @@ def write_theme_file():
         suf = file.split('.')
         if len(suf) > 1:
             suf = suf[len(suf)-1].lower()
+
         if suf == 'png' or suf == 'jpg':
             fread.seek(start)
             line = fread.readline()
@@ -49,34 +71,36 @@ def write_theme_file():
     fwrite.close()
     fappend.close()
 
-    # Execute the anime.theme command
-    os.system(PATH)
-
 class Handler(FileSystemEventHandler):
     @staticmethod
     def on_created(e):
+        new_filename = f'{uuid.uuid1()}.png'
         with open(PATH, 'a') as fa:
-            new_filename = f'{uuid.uuid1()}.png'
-            os.rename(e.src_path, new_filename)
             fa.write(new_filename)
         fa.close()
-        os.system(PATH)
+        
+        # To prevent updating every time a new file is added
+        if get_file_count() % 5 == 0:
+            activate_theme()
 
     @staticmethod
     def on_moved(e):
         write_theme_file()
+        activate_theme()
     
     @staticmethod
     def on_deleted(e):
         write_theme_file()
+        activate_theme()
 
 if __name__ == "__main__":
     fs_event_handler = Handler()
     observer = Observer()
 
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
     
     path = sys.argv[1] if len(sys.argv) > 1 else '.'
     observer.schedule(fs_event_handler, path, recursive=False)
