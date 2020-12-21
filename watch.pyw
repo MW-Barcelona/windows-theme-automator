@@ -9,12 +9,13 @@ from watchdog.events import LoggingEventHandler, FileSystemEventHandler
 
 
 PATH = 'C:\\Users\\Oshino\\AppData\\Local\\Microsoft\\Windows\\Themes\\anime.theme'
+MY_PICTURES = "C:\\Users\\Oshino\\Pictures\\wp\\"
 
 def get_file_count():
     dir = '.'
     count = 0
     for path in os.listdir(dir):
-        suf = file.split('.')
+        suf = path.split('.')
         if len(suf) > 1:
             suf = suf[len(suf)-1].lower()
 
@@ -40,7 +41,7 @@ def rename_pictures():
 def write_theme_file():
     i = 0
     linenum = 0
-    fread = open('./temp.txt', 'r')
+    fread = open('./config.txt', 'r')
     fwrite = open(PATH, 'w')
     fappend = open(PATH, 'a')
 
@@ -63,7 +64,7 @@ def write_theme_file():
         if suf == 'png' or suf == 'jpg':
             fread.seek(start)
             line = fread.readline()
-            new_filename = f"\nItem{i}Path=C:\\Users\\Oshino\\Pictures\\wp\\{file}"
+            new_filename = f"\nItem{i}Path={MY_PICTURES}{file}"
             fappend.write(new_filename)
             i += 1
 
@@ -74,10 +75,7 @@ def write_theme_file():
 class Handler(FileSystemEventHandler):
     @staticmethod
     def on_created(e):
-        new_filename = f'{uuid.uuid1()}.png'
-        with open(PATH, 'a') as fa:
-            fa.write(new_filename)
-        fa.close()
+        write_theme_file()
         
         # To prevent updating every time a new file is added
         if get_file_count() % 5 == 0:
